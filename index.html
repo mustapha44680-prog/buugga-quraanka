@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دفتر حساب دروس القرآن الكريم</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f4ee;--card:#fff;--tx:#1d2b26;--mu:#66736c;--ac:#0f6b4f;--bd:#d9d6cb;--er:#b3261e;--hl:#e6f2ec}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121c18;--card:#1b2a24;--tx:#e8efe9;--mu:#9aaaa2;--ac:#4cc39a;--bd:#33463e;--er:#ff8a80;--hl:#22382f}}
+:root[data-theme="dark"]{--bg:#121c18;--card:#1b2a24;--tx:#e8efe9;--mu:#9aaaa2;--ac:#4cc39a;--bd:#33463e;--er:#ff8a80;--hl:#22382f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}textarea{width:100%;min-height:90px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px;font:inherit}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:12px}
+h1{font-size:18px;margin:0 0 2px}.sub{color:var(--mu);font-size:12px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+button,input{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;cursor:pointer}
+button.on,button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+input{background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:5px 6px;width:100%;min-width:0}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--bd);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{border-bottom:1px solid var(--bd);padding:4px;text-align:center;font-size:13px}
+th{background:var(--hl);position:sticky;top:0}
+td.n{text-align:right;white-space:nowrap;font-weight:600}
+select.m{appearance:none;-webkit-appearance:none;width:100%;min-width:44px;text-align:center;text-align-last:center;background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:6px 2px;font-size:16px;cursor:pointer;color:var(--tx)}
+.m-ok{color:var(--ac)!important;font-weight:700}.m-x{color:var(--er)!important;font-weight:700}
+td.n{min-width:210px}
+td.n span{color:var(--mu);font-weight:400;margin-left:6px}
+.ar{direction:rtl;unicode-bidi:plaintext}
+.er{color:var(--er)}th.er{color:var(--er)}
+.tot{font-weight:700}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--hl);color:var(--ac)}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.s{opacity:1}
+.star{background:var(--hl);border:1px solid var(--ac);border-radius:10px;padding:12px;margin:10px 0;font-size:16px}
+@media print{.bar,button,#toast{display:none!important}input{border:0}body{padding:0}}
+</style></head>
+<body>
+<h1>دفتر حساب دروس القرآن الكريم — Salahuddin Al-Ayyubi</h1>
+<div class="sub">دفتر حساب دروس القرآن الكريم · <span class="badge" id="mode">…</span> <button data-a="out" id="out" hidden style="padding:2px 10px;font-size:12px">خروج</button></div>
+<div id="login" hidden style="max-width:340px;margin:24px auto;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px"><b>تسجيل الدخول</b><p class="sub" id="lmsg"></p><input id="em" type="email" dir="ltr" placeholder="البريد الإلكتروني" style="margin:6px 0"><input id="pw" type="password" dir="ltr" placeholder="كلمة المرور" style="margin:6px 0"><button class="pri" id="lbtn" style="width:100%">دخول</button><p class="er" id="lerr"></p></div>
+<div id="main" hidden>
+<div class="bar" id="tabs">
+  <button data-t="w" class="on">الأسبوع</button>
+  <button data-t="m">نجم الشهر</button>
+  <button data-t="r">الطلاب</button>
+</div>
+<div id="app"></div>
+</div>
+<div id="toast"></div>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,doc,setDoc,onSnapshot,collection} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// ===== الصق إعدادات Firebase هنا (firebaseConfig) =====
+const firebaseConfig={apiKey:"AIzaSyAGNmLzkN3UGk7_Y05uilWcrhFYVrjkf3E",authDomain:"buuga-xisabta-quran.firebaseapp.com",projectId:"buuga-xisabta-quran",appId:"1:160076528862:web:18db9686eab8201d99d64f"};
+// =====================================================
+const DAYS=['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء'];
+const p=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+const satOf=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+1)%7));return x};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S={roster:[],rec:{}},wk=satOf(new Date()),tab='w',month=iso(wk).slice(0,7),db=null,dirty=false,armed=null,cf='';
+const MK=[['','·'],['ok','✓'],['x','✗'],['M','M'],['F','F'],['-','-']];
+const sel=(j,sid,v)=>`<select class="m m-${esc(v)}" data-k="d${j}" data-s="${sid}">${MK.map(o=>`<option value="${o[0]}"${o[0]===v?' selected':''}>${o[1]}</option>`).join('')}${v&&!MK.some(o=>o[0]===v)?`<option value="${esc(v)}" selected>${esc(v)}</option>`:''}</select>`;
+const $=id=>document.getElementById(id);
+function flash(t,bad){const e=$('toast');e.textContent=t;e.style.background=bad?'#b3261e':'';e.style.color=bad?'#fff':'';e.className='s';clearTimeout(flash.t);flash.t=setTimeout(()=>e.className='',1800)}
+function stats(m){const o={};for(const r of Object.values(S.rec)){if(r.m!==m)continue;const x=o[r.sid]||(o[r.sid]={days:0,err:0}),d=r.d||[];x.days+=d.filter(v=>v==='ok').length;x.err+=(r.e===''||r.e==null)?d.filter(v=>v==='x').length:(Number(r.e)||0)}return o}
+function render(){
+  dirty=false;const k=iso(wk);
+  if(tab==='w'){
+    const end=new Date(wk);end.setDate(end.getDate()+4);const st=stats(k.slice(0,7));
+    const cls=[...new Set(S.roster.map(s=>s.cls).filter(Boolean))];
+    const rows=S.roster.filter(s=>!cf||s.cls===cf).map((s,i)=>{const r=S.rec[k+'_'+s.id]||{d:[]};
+      return `<tr><td class="n"><span>${i+1}</span><input class="ar" data-k="rn" data-s="${s.id}" value="${esc(s.name)}" style="width:calc(100% - 26px)"></td>
+      <td><input class="ar" data-k="cl" data-s="${s.id}" value="${esc(s.cls||'')}" style="width:72px"></td>
+      <td><input class="ar" data-k="su" data-s="${s.id}" value="${esc(s.surah)}"></td>
+      ${DAYS.map((_,j)=>`<td>${sel(j,s.id,r.d[j]||'')}</td>`).join('')}
+      <td><input type="number" min="0" inputmode="numeric" data-k="e" data-s="${s.id}" value="${esc(r.e??'')}" placeholder="${(r.d||[]).filter(v=>v==='x').length||''}" class="er"></td>
+      <td class="tot">${(st[s.id]||{err:0}).err}</td>
+      <td><input class="ar" data-k="h" data-s="${s.id}" value="${esc(r.h||'')}"></td></tr>`}).join('');
+    $('app').innerHTML=`<div class="bar"><button data-a="prev">▶</button><b><bdi dir="ltr">${k} ← ${iso(end)}</bdi></b><button data-a="next">◀</button><button data-a="today">هذا الأسبوع</button><button data-a="print">طباعة</button>${cls.length?`<select data-k="cf" style="padding:7px;border-radius:8px;background:var(--card);color:var(--tx);border:1px solid var(--bd)"><option value="">كل الفصول</option>${cls.map(c=>`<option value="${esc(c)}"${c===cf?' selected':''}>${esc(c)}</option>`).join('')}</select>`:''}</div>
+    <div class="wrap"><table><thead><tr><th>الطالب</th><th>الفصل</th><th>السورة</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}<th class="er">أخطاء</th><th>مجموع أخطاء الشهر</th><th>حفظ الجديد</th></tr></thead><tbody>${rows}</tbody></table></div>${S.roster.length?'':'<p class="sub">لا يوجد طلاب بعد — اذهب إلى تبويب «الطلاب» لاستيراد القائمة.</p>'}`;
+  }else if(tab==='m'){
+    const st=stats(month),rk=S.roster.map(s=>({s,...(st[s.id]||{days:0,err:0})})).filter(x=>x.days>0).sort((a,b)=>b.days-a.days||a.err-b.err);
+    const top=rk[0];
+    $('app').innerHTML=`<div class="bar"><input type="month" value="${month}" data-k="mo" style="width:auto"><button data-a="print">طباعة</button></div>
+    ${top?`<div class="star">⭐ <b>نجم الشهر:</b> <bdi class="ar">${esc(top.s.name)}</bdi> — ${top.days} ✓ ، ${top.err} خطأ</div>`:'<div class="star">لا توجد بيانات لهذا الشهر بعد.</div>'}
+    <div class="wrap"><table><thead><tr><th>#</th><th>الطالب</th><th>أيام ✓ (صح)</th><th class="er">الأخطاء</th></tr></thead><tbody>${rk.map((x,i)=>`<tr><td>${i+1}</td><td class="n"><bdi class="ar">${esc(x.s.name)}</bdi></td><td>${x.days}</td><td class="er">${x.err}</td></tr>`).join('')}</tbody></table></div>
+    <p class="sub">طريقة الترتيب: الأكثر علامات ✓ أولًا، ثم الأقل أخطاءً. الأخطاء = الرقم المكتوب في خانة «أخطاء»، وإن تُرك فارغًا تُحسب علامات ✗.</p>`;
+  }else{
+    $('app').innerHTML=`<div class="bar"><button class="pri" data-a="add">+ طالب جديد</button></div>
+    <div class="wrap"><table style="min-width:520px"><thead><tr><th>#</th><th>الاسم</th><th>الفصل</th><th>السورة</th><th></th></tr></thead><tbody>${S.roster.map((s,i)=>`<tr><td>${i+1}</td><td><input class="ar" data-k="rn" data-s="${s.id}" value="${esc(s.name)}"></td><td><input class="ar" data-k="cl" data-s="${s.id}" value="${esc(s.cls||'')}"></td><td><input class="ar" data-k="su" data-s="${s.id}" value="${esc(s.surah)}"></td><td><button data-a="del" data-s="${s.id}">${armed===s.id?'تأكيد ✕':'حذف'}</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="star" style="font-size:14px"><b>استيراد طلاب</b> <span class="sub">— سطر لكل طالب: الاسم | السورة | الفصل (اختياري)</span><textarea id="imp" dir="rtl" style="margin:8px 0"></textarea><button class="pri" data-a="imp">استيراد</button></div>`;
+  }
+}
+async function persist(kind,obj){
+  if(!fs){flash('Firebase غير مضبوط',1);return}
+  try{if(kind==='r')await setDoc(doc(fs,'roster','main'),{list:S.roster});else await setDoc(doc(fs,'records',obj.id),obj);flash('تم الحفظ ✓')}
+  catch(e){flash('تعذّر الحفظ: '+(e.code||'خطأ'),1)}
+}
+document.addEventListener('change',e=>{
+  const t=e.target,k=t.dataset.k,sid=t.dataset.s;if(!k)return;
+  if(k==='cf'){cf=t.value;render();return}
+  if(k==='mo'){month=t.value||month;render();return}
+  if(k==='su'||k==='rn'||k==='cl'){const s=S.roster.find(x=>x.id===sid);if(!s)return;if(k==='su')s.surah=t.value;else if(k==='cl')s.cls=t.value.trim();else s.name=t.value;persist('r');return}
+  const id=iso(wk)+'_'+sid,r=S.rec[id]||(S.rec[id]={id,wk:iso(wk),sid,m:iso(wk).slice(0,7),d:['','','','',''],e:'',h:''});
+  if(k[0]==='d')r.d[+k[1]]=t.value;else if(k==='e')r.e=t.value;else if(k==='h')r.h=t.value;
+  persist('c',r);render();
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.t){tab=b.dataset.t;armed=null;document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));render();return}
+  const a=b.dataset.a;if(!a)return;
+  if(a==='prev'||a==='next'){wk.setDate(wk.getDate()+(a==='next'?7:-7));wk=new Date(wk);month=iso(wk).slice(0,7)}
+  else if(a==='today'){wk=satOf(new Date());month=iso(wk).slice(0,7)}
+  else if(a==='print'){window.print();return}
+  else if(a==='out'){signOut(auth);return}
+  else if(a==='imp'){let n=0;for(const l of $('imp').value.split('\n').map(x=>x.trim()).filter(Boolean)){const [nm,su,cl]=l.split('|').map(x=>x.trim());if(!nm||S.roster.some(x=>x.name===nm))continue;S.roster.push({id:'s'+Date.now().toString(36)+(n++),name:nm,surah:su||'',cls:cl||''})}if(n)persist('r');flash('تم استيراد '+n+' طالب')}
+  else if(a==='add'){S.roster.push({id:'s'+Date.now().toString(36),name:'',surah:'',cls:''});persist('r')}
+  else if(a==='del'){if(armed===b.dataset.s){S.roster=S.roster.filter(x=>x.id!==armed);armed=null;persist('r')}else armed=b.dataset.s}
+  render();
+});
+document.addEventListener('focusout',()=>{setTimeout(()=>{if(dirty&&!(document.activeElement&&document.activeElement.tagName==='INPUT'))render()},50)});
+function soft(){if(document.activeElement&&document.activeElement.tagName==='INPUT')dirty=true;else render()}
+let app,auth,fs,unsubs=[];
+function stop(){unsubs.forEach(u=>u());unsubs=[];S={roster:[],rec:{}}}
+function start(){
+  unsubs.push(onSnapshot(doc(fs,'roster','main'),sn=>{S.roster=sn.exists()?(sn.data().list||[]):[];soft()},()=>flash('تعذّر قراءة الطلاب',1)));
+  unsubs.push(onSnapshot(collection(fs,'records'),qs=>{const o={};qs.docs.forEach(d=>{o[d.id]=d.data()});S.rec=o;soft()},()=>flash('تعذّر قراءة السجلات',1)));
+}
+if(!String(firebaseConfig.apiKey).startsWith('PASTE')){
+  app=initializeApp(firebaseConfig);auth=getAuth(app);fs=getFirestore(app);
+  onAuthStateChanged(auth,u=>{
+    $('login').hidden=!!u;$('main').hidden=!u;$('out').hidden=!u;$('mode').textContent=u?u.email:'غير مسجّل';
+    stop();if(u){start()}render();
+  });
+  const go=async()=>{$('lerr').textContent='';try{await signInWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value)}catch(e){$('lerr').textContent='البريد أو كلمة المرور غير صحيحة'}};
+  $('lbtn').onclick=go;$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+}else{$('login').hidden=false;$('lmsg').textContent='لم يُضبط Firebase بعد: الصق الإعدادات في أعلى الملف.'}
+render();
+</script></body></html>
